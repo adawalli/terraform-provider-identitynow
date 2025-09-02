@@ -39,6 +39,29 @@ func TestAccExampleDataIdentity(t *testing.T) {
 	})
 }
 
+func TestAccExampleDataIdentityWithFilters(t *testing.T) {
+	identityName, ok := os.LookupEnv("ACC_TEST_IDENTITY_NAME")
+	if !ok {
+		t.Skip("Skipping TestAcc_Project: ACC_TEST_IDENTITY_NAME not specified")
+	}
+
+	// Test with name filter
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {},
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"identitynow": providerserver.NewProtocol6WithError(identitynow.New("test")()),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: configSourceWithFilters(fmt.Sprintf(`name eq "%s"`, identityName)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.identitynow_identity.test", "name", identityName),
+				),
+			},
+		},
+	})
+}
+
 func configSource(id string) string {
 	return fmt.Sprintf(`
 	data "identitynow_identity" "test" {
@@ -46,5 +69,15 @@ func configSource(id string) string {
 	  }
 	`,
 		id,
+	)
+}
+
+func configSourceWithFilters(filter string) string {
+	return fmt.Sprintf(`
+	data "identitynow_identity" "test" {
+		filters = "%s"
+	  }
+	`,
+		filter,
 	)
 }

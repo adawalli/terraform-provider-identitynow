@@ -24,6 +24,8 @@ type Identity struct {
 	IdentityStatus     types.String `tfsdk:"identity_status"`
 	UseCallerIdentity  types.Bool   `tfsdk:"use_caller_identity"`
 	CallerIdentityUsed types.Bool   `tfsdk:"caller_identity_used"`
+	// Filter expression for querying identities
+	Filters types.String `tfsdk:"filters"`
 
 	// ManagerRef *BaseReferenceDto1 `json:"managerRef"`
 	// // Whether this identity is a manager of another identity

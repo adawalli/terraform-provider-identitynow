@@ -30,7 +30,7 @@ func (d *IdentityDataSource) Metadata(ctx context.Context, req datasource.Metada
 
 func (d *IdentityDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Identity data source",
+		MarkdownDescription: "Identity data source - returns exactly one identity based on the specified criteria",
 
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -76,6 +76,10 @@ func (d *IdentityDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 				Computed:            true,
 				MarkdownDescription: "Helper flag to indicate if the caller's identity is being used",
 			},
+			"filters": schema.StringAttribute{
+				Optional:            true,
+				MarkdownDescription: "Filter expression for querying identities (e.g., 'alias sw \"john\"', 'email sw \"alice\"', or 'firstname co \"John\"'). Must return exactly one identity or an error will occur. Cannot be used with id, alias, or email_address convenience parameters, but can filter on those fields using the filter syntax.",
+			},
 		},
 	}
 }
@@ -106,6 +110,7 @@ func (d *IdentityDataSource) ConfigValidators(ctx context.Context) []datasource.
 			path.MatchRoot("id"),
 			path.MatchRoot("alias"),
 			path.MatchRoot("email_address"),
+			path.MatchRoot("filters"),
 		),
 	}
 }
@@ -121,7 +126,7 @@ func (d *IdentityDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	data.CallerIdentityUsed = types.BoolValue(false)
 
-	if !data.Alias.IsNull() || !data.EmailAddress.IsNull() {
+	if !data.Alias.IsNull() || !data.EmailAddress.IsNull() || !data.Filters.IsNull() {
 
 		var filter string
 
@@ -131,6 +136,10 @@ func (d *IdentityDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 		if !data.EmailAddress.IsNull() {
 			filter = fmt.Sprintf(`email eq "%v"`, data.EmailAddress.ValueString())
+		}
+
+		if !data.Filters.IsNull() {
+			filter = data.Filters.ValueString()
 		}
 
 		users, httpResp, err := d.client.Beta.IdentitiesAPI.ListIdentities(context.Background()).Filters(filter).Execute()
